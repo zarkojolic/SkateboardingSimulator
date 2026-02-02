@@ -1,0 +1,10 @@
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+.vs/
+*.exe
+*.dll
+*.pdb
+.DS_Store
+Thumbs.db
