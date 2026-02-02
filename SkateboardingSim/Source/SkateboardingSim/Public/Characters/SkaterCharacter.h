@@ -28,6 +28,14 @@ protected:
 	void LookUp(float Value);
 	void Turn(float Value);
 
+	void SkateJump();
+	
+	void StartPush();
+	void StopPush();
+
+	void StartBrake();
+	void StopBrake();
+
 private:
 	UPROPERTY(VisibleAnywhere)
 	USpringArmComponent* CameraBoom;
@@ -37,4 +45,25 @@ private:
 	
 	UPROPERTY(EditAnywhere, Category = Mesh) 
 	USkeletalMeshComponent* Skateboard;
+	
+	UPROPERTY(VisibleAnywhere, Category = "Skate Movement")
+	float MoveForwardValue = 0.f;
+	
+	bool bIsPushing;
+	bool bIsBraking;
+	
+	UPROPERTY(EditAnywhere, Category = "Skate Movement")
+	float PushAcceleration = 20.f;
+	
+	UPROPERTY(EditAnywhere, Category = "Skate Movement")
+	float MaxSkateSpeed = 800.f;
+
+	UPROPERTY(VisibleAnywhere, Category = "Skate Movement")
+	float DefaultBrakingDeceleration;
+	UPROPERTY(VisibleAnywhere, Category = "Skate Movement")
+	float EnhancedBrakingDeceleration;
+
+public:
+
+	FORCEINLINE bool GetIsPushing() const { return bIsPushing; } 
 };

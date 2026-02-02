@@ -5,6 +5,7 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 
 ASkaterCharacter::ASkaterCharacter()
 {
@@ -15,7 +16,11 @@ ASkaterCharacter::ASkaterCharacter()
 	bUseControllerRotationRoll = false;
 
 	GetCharacterMovement()->bOrientRotationToMovement = true;
-	GetCharacterMovement()->RotationRate = FRotator(0.f, 200.f, 0.f);
+	GetCharacterMovement()->RotationRate = FRotator(0.f, 360.f, 0.f);
+	GetCharacterMovement()->MaxWalkSpeed = MaxSkateSpeed;
+	DefaultBrakingDeceleration = GetCharacterMovement()->BrakingDecelerationWalking;
+
+	EnhancedBrakingDeceleration = DefaultBrakingDeceleration*20;
 
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("Camera Boom"));
 	CameraBoom->TargetArmLength = 300.f;
@@ -39,6 +44,23 @@ void ASkaterCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	float CurrentSpeed = GetVelocity().Size2D();
+	FVector Forward = GetActorForwardVector();
+	UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
+
+	if (bIsPushing && MovementComponent && CurrentSpeed > 0 && CurrentSpeed < MovementComponent->MaxWalkSpeed)
+	{
+		AddMovementInput(Forward, PushAcceleration * DeltaTime);
+	}
+
+	if (bIsBraking && CurrentSpeed > 0.f && !MovementComponent->IsFalling())
+    {
+		MovementComponent->BrakingDecelerationWalking = EnhancedBrakingDeceleration;
+    }
+	else
+	{
+		MovementComponent->BrakingDecelerationWalking = DefaultBrakingDeceleration;
+	}
 }
 
 void ASkaterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -49,22 +71,33 @@ void ASkaterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	PlayerInputComponent->BindAxis(FName("LookUp"), this, &ASkaterCharacter::LookUp);
 	PlayerInputComponent->BindAxis(FName("Turn"), this, &ASkaterCharacter::Turn);
 
+	PlayerInputComponent->BindAction(FName("Jump"), EInputEvent::IE_Pressed, this, &ASkaterCharacter::SkateJump);
+	PlayerInputComponent->BindAction(FName("Push"), EInputEvent::IE_Pressed, this, &ASkaterCharacter::StartPush);
+	PlayerInputComponent->BindAction(FName("Push"), EInputEvent::IE_Released, this, &ASkaterCharacter::StopPush);
+	PlayerInputComponent->BindAction(FName("Brake"), EInputEvent::IE_Pressed, this, &ASkaterCharacter::StartBrake);
+	PlayerInputComponent->BindAction(FName("Brake"), EInputEvent::IE_Released, this, &ASkaterCharacter::StopBrake);
 }
 
 void ASkaterCharacter::MoveForward(float Value)
 {
-	if (Value != 0.f)
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (PC && PC->IsInputKeyDown(EKeys::S))
 	{
-		AddMovementInput(GetActorForwardVector(), Value);
+		Value = 0.f;
 	}
+	MoveForwardValue = UKismetMathLibrary::Lerp(MoveForwardValue, Value, 0.01f);
+	AddMovementInput(GetActorForwardVector(),MoveForwardValue);
 }
 
 void ASkaterCharacter::MoveRight(float Value)
 {
-	if (Value != 0.f)
+
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (Value != 0.f && PC && PC->IsInputKeyDown(EKeys::W))
 	{
-		AddMovementInput(GetActorRightVector(), Value);
+		AddMovementInput(GetActorRightVector(),Value * 0.02f);
 	}
+
 }
 
 void ASkaterCharacter::LookUp(float Value)
@@ -81,4 +114,30 @@ void ASkaterCharacter::Turn(float Value)
 	{
 		AddControllerYawInput(Value);
 	}
+}
+
+void ASkaterCharacter::SkateJump()
+{
+	Jump();
+}
+
+
+void ASkaterCharacter::StartPush()
+{
+	bIsPushing = true;
+}
+
+void ASkaterCharacter::StopPush()
+{
+	bIsPushing = false;
+}
+
+void ASkaterCharacter::StartBrake()
+{
+	bIsBraking = true;
+}
+
+void ASkaterCharacter::StopBrake()
+{
+	bIsBraking = false;
 }
