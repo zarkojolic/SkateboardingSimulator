@@ -60,7 +60,6 @@ void ASkaterCharacter::Tick(float DeltaTime)
 
 	//! Current Speed on X and Y Axis and forward vector
 	CurrentSpeed = GetVelocity().Size2D();
-	// UE_LOG(LogTemp, Warning, TEXT("CurrentSpeed: %f || CurrentSpeedLastFrame: %f"), CurrentSpeed, CurrentSpeedLastFrame);
 	FVector Forward = GetActorForwardVector();
 	UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
 
@@ -99,6 +98,7 @@ void ASkaterCharacter::Tick(float DeltaTime)
 	{
 		StartPush();
 	}
+	
 	
 }
 
@@ -246,3 +246,5 @@ void ASkaterCharacter::StopBrake()
 {
 	bIsBraking = false;
 }
+
+

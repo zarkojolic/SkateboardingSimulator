@@ -42,6 +42,9 @@ protected:
 	void UpdateJumpVisualOffset();
 	void StopJumpVisualOffset();
 
+	bool TraceGroundFromSocket(FName SocketName, FHitResult& OutHit);
+	void AlignToGround(const FVector& GroundNormal, float DeltaTime);
+
 private:
 	UPROPERTY(VisibleAnywhere)
 	USpringArmComponent* CameraBoom;
@@ -55,6 +58,7 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	APlayerController* PC;
 	
+	//! Movement system
 	UPROPERTY(VisibleAnywhere, Category = "Skate Movement")
 	float MoveForwardValue = 0.f;
 	
@@ -72,6 +76,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Skate Movement")
 	float MaxSkateSpeed = 1000.f;
 	
+	//! Jump system
 	UPROPERTY(EditAnywhere, Category = "Skate Movement")
 	UCurveFloat* JumpOffsetCurve;
 	
@@ -87,11 +92,14 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Animation")
 	UAnimMontage* JumpMontage;
 	
+	//! Points system
 	UPROPERTY(VisibleAnywhere, Category = "Score")
 	int32 ScorePoints = 0;
 	
 	UPROPERTY(EditAnywhere, Category = "User Interface")
 	TSubclassOf<UUserWidget> HUDWidgetClass;
+
+	
 
 public:
 	FORCEINLINE bool GetIsPushing() const { return bIsPushing; } 
