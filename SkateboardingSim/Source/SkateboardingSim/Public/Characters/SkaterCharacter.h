@@ -4,6 +4,7 @@
 
 class USpringArmComponent;
 class UCameraComponent;
+class UCurveFloat;
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
@@ -38,6 +39,9 @@ protected:
 	void StartBrake();
 	void StopBrake();
 
+	void UpdateJumpVisualOffset();
+	void StopJumpVisualOffset();
+
 private:
 	UPROPERTY(VisibleAnywhere)
 	USpringArmComponent* CameraBoom;
@@ -57,7 +61,9 @@ private:
 	bool bIsPushing;
 	bool bPushingButtonPressed;
 	bool bIsBraking;
-
+	
+	UPROPERTY(VisibleAnywhere, Category = "Skate Movement")
+	float CurrentSpeed;
 	float CurrentSpeedLastFrame = 0.f;
 	
 	UPROPERTY(EditAnywhere, Category = "Skate Movement")
@@ -65,8 +71,33 @@ private:
 	
 	UPROPERTY(EditAnywhere, Category = "Skate Movement")
 	float MaxSkateSpeed = 1000.f;
+	
+	UPROPERTY(EditAnywhere, Category = "Skate Movement")
+	UCurveFloat* JumpOffsetCurve;
+	
+	UPROPERTY(EditAnywhere, Category = "Skate Movement")
+	float MaxJumpVisualOffset = 50.f;
+	
+	float JumpElapsedTime = 0.f;
+	bool bApplyJumpOffset = false;
+	
+	FVector InitialSkateboardOffset;
+	FTimerHandle JumpOffsetTimerHandle;
+
+	UPROPERTY(EditAnywhere, Category = "Animation")
+	UAnimMontage* JumpMontage;
+	
+	UPROPERTY(VisibleAnywhere, Category = "Score")
+	int32 ScorePoints = 0;
+	
+	UPROPERTY(EditAnywhere, Category = "User Interface")
+	TSubclassOf<UUserWidget> HUDWidgetClass;
 
 public:
-
 	FORCEINLINE bool GetIsPushing() const { return bIsPushing; } 
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE int32 GetScore() const { return ScorePoints; }
+	FORCEINLINE void AddScore(int32 Amount) { ScorePoints += Amount; UE_LOG(LogTemp, Warning, TEXT("ScorePoints: %d"), ScorePoints); }
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE int GetCurrentSpeed() const { return StaticCast<int>(CurrentSpeed *0.036f); }
 };

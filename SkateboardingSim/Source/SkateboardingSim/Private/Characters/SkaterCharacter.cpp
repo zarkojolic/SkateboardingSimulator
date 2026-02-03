@@ -6,6 +6,8 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Curves/CurveFloat.h"
+#include "Blueprint/UserWidget.h"
 
 ASkaterCharacter::ASkaterCharacter()
 {
@@ -41,6 +43,15 @@ void ASkaterCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	PC = Cast<APlayerController>(GetController());
+
+	InitialSkateboardOffset = Skateboard->GetRelativeLocation();
+
+	if (HUDWidgetClass)
+	{
+		UUserWidget* HUD = CreateWidget(GetWorld(), HUDWidgetClass);
+		HUD->AddToViewport();
+	}
+	
 }
 
 void ASkaterCharacter::Tick(float DeltaTime)
@@ -48,8 +59,8 @@ void ASkaterCharacter::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	//! Current Speed on X and Y Axis and forward vector
-	float CurrentSpeed = GetVelocity().Size2D();
-	UE_LOG(LogTemp, Warning, TEXT("CurrentSpeed: %f || CurrentSpeedLastFrame: %f"), CurrentSpeed, CurrentSpeedLastFrame);
+	CurrentSpeed = GetVelocity().Size2D();
+	// UE_LOG(LogTemp, Warning, TEXT("CurrentSpeed: %f || CurrentSpeedLastFrame: %f"), CurrentSpeed, CurrentSpeedLastFrame);
 	FVector Forward = GetActorForwardVector();
 	UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
 
@@ -142,7 +153,65 @@ void ASkaterCharacter::Turn(float Value)
 
 void ASkaterCharacter::SkateJump()
 {
-	Jump();
+	UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
+	if (!MovementComponent->IsFalling())
+	{
+		JumpElapsedTime = 0.f;
+
+		GetWorldTimerManager().SetTimer(
+			JumpOffsetTimerHandle,
+			this,
+			&ASkaterCharacter::UpdateJumpVisualOffset,
+			0.016f,
+			true
+		);
+
+		UAnimInstance* SkaterAnimInstance = GetMesh()->GetAnimInstance();
+		if (JumpMontage && SkaterAnimInstance)
+		{
+			SkaterAnimInstance->Montage_Play(JumpMontage, 0.75f);
+		}
+		
+		Jump();
+	}
+}
+
+void ASkaterCharacter::UpdateJumpVisualOffset()
+{
+	if (!JumpOffsetCurve || !Skateboard)
+	{
+		StopJumpVisualOffset();
+		return;
+	}
+
+	JumpElapsedTime += 0.016f;
+
+	float NormalizedTime = JumpElapsedTime / 1.0f;
+
+	if (NormalizedTime >= 0.8f)
+	{
+		StopJumpVisualOffset();
+		return;
+	}
+
+	float CurveValue = JumpOffsetCurve->GetFloatValue(NormalizedTime);
+
+	FVector NewOffset = InitialSkateboardOffset;
+	NewOffset.Z += CurveValue * MaxJumpVisualOffset;
+
+	Skateboard->SetRelativeLocation(NewOffset);
+}
+
+void ASkaterCharacter::StopJumpVisualOffset()
+{
+	JumpElapsedTime = 0.f;
+
+	GetWorldTimerManager().ClearTimer(JumpOffsetTimerHandle);
+
+	if (Skateboard)
+	{
+		Skateboard->SetRelativeLocation(InitialSkateboardOffset);
+	}
 }
 
 void ASkaterCharacter::PushButtonPressed()
