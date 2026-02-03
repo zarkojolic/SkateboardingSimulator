@@ -30,6 +30,8 @@ protected:
 
 	void SkateJump();
 	
+	void PushButtonPressed();
+	void PushButtonReleased();
 	void StartPush();
 	void StopPush();
 
@@ -46,22 +48,23 @@ private:
 	UPROPERTY(EditAnywhere, Category = Mesh) 
 	USkeletalMeshComponent* Skateboard;
 	
+	UPROPERTY(VisibleAnywhere)
+	APlayerController* PC;
+	
 	UPROPERTY(VisibleAnywhere, Category = "Skate Movement")
 	float MoveForwardValue = 0.f;
 	
 	bool bIsPushing;
+	bool bPushingButtonPressed;
 	bool bIsBraking;
-	
-	UPROPERTY(EditAnywhere, Category = "Skate Movement")
-	float PushAcceleration = 20.f;
-	
-	UPROPERTY(EditAnywhere, Category = "Skate Movement")
-	float MaxSkateSpeed = 800.f;
 
-	UPROPERTY(VisibleAnywhere, Category = "Skate Movement")
-	float DefaultBrakingDeceleration;
-	UPROPERTY(VisibleAnywhere, Category = "Skate Movement")
-	float EnhancedBrakingDeceleration;
+	float CurrentSpeedLastFrame = 0.f;
+	
+	UPROPERTY(EditAnywhere, Category = "Skate Movement")
+	float PushAcceleration = 2.f;
+	
+	UPROPERTY(EditAnywhere, Category = "Skate Movement")
+	float MaxSkateSpeed = 1000.f;
 
 public:
 

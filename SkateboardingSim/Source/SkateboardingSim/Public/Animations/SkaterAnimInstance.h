@@ -26,4 +26,7 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Category = Movement)
 	bool bIsCharacterPushing;
+	
+	UPROPERTY(BlueprintReadOnly, Category = Movement)
+	bool bIsInAir;
 };

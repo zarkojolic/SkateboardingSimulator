@@ -3,6 +3,7 @@
 
 #include "Animations/SkaterAnimInstance.h"
 #include "Characters/SkaterCharacter.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 void USkaterAnimInstance::NativeInitializeAnimation()
 {
@@ -22,5 +23,14 @@ void USkaterAnimInstance::NativeUpdateAnimation(float DeltaTime)
     if (MovementComponent)
     {
         bIsCharacterPushing = Character->GetIsPushing();
+
+        if(MovementComponent->IsFalling())
+        {
+            bIsInAir = true;
+        }
+        else
+        {
+            bIsInAir = false;
+        }
     }
 }

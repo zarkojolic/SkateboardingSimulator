@@ -15,52 +15,80 @@ ASkaterCharacter::ASkaterCharacter()
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationRoll = false;
 
+	//! Character Movement Component props adjusting
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 360.f, 0.f);
 	GetCharacterMovement()->MaxWalkSpeed = MaxSkateSpeed;
-	DefaultBrakingDeceleration = GetCharacterMovement()->BrakingDecelerationWalking;
 
-	EnhancedBrakingDeceleration = DefaultBrakingDeceleration*20;
-
+	//! Spring Arm Component
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("Camera Boom"));
 	CameraBoom->TargetArmLength = 300.f;
 	CameraBoom->bUsePawnControlRotation = true;
 	CameraBoom->SetupAttachment(GetRootComponent());
 
+	//! View Camera attached to spring arm
 	ViewCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("View Camera"));
 	ViewCamera->SetupAttachment(CameraBoom);
 	
+	//! Skateboard Skeletal Mesh
 	Skateboard = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Skateboard Mesh"));
 	Skateboard->SetupAttachment(GetMesh());
+
 }
 
 void ASkaterCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	PC = Cast<APlayerController>(GetController());
 }
 
 void ASkaterCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	//! Current Speed on X and Y Axis and forward vector
 	float CurrentSpeed = GetVelocity().Size2D();
+	UE_LOG(LogTemp, Warning, TEXT("CurrentSpeed: %f || CurrentSpeedLastFrame: %f"), CurrentSpeed, CurrentSpeedLastFrame);
 	FVector Forward = GetActorForwardVector();
 	UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
 
+	//! Reset Speed to 0 when Player Hits a wall
+	if (CurrentSpeedLastFrame - CurrentSpeed > 100.f)
+	{
+		MoveForwardValue = 0.f;
+	}
+	CurrentSpeedLastFrame = CurrentSpeed;
+
+	//! Pushing Mechanic
 	if (bIsPushing && MovementComponent && CurrentSpeed > 0 && CurrentSpeed < MovementComponent->MaxWalkSpeed)
 	{
 		AddMovementInput(Forward, PushAcceleration * DeltaTime);
 	}
 
+	//! Braking Mechanic
 	if (bIsBraking && CurrentSpeed > 0.f && !MovementComponent->IsFalling())
     {
-		MovementComponent->BrakingDecelerationWalking = EnhancedBrakingDeceleration;
+		if (MoveForwardValue > 0.f && CurrentSpeed > 30.f)
+		{
+			MoveForwardValue *= 0.97;
+		}
+		else if (CurrentSpeed <= 30.f)
+		{
+			MoveForwardValue = 0.f;
+		}
     }
-	else
+
+	//! Pushing Mechanic
+	if (CurrentSpeed == MovementComponent->MaxWalkSpeed || MovementComponent->IsFalling() || !bPushingButtonPressed)
 	{
-		MovementComponent->BrakingDecelerationWalking = DefaultBrakingDeceleration;
+		StopPush();
 	}
+	else if (bPushingButtonPressed)
+	{
+		StartPush();
+	}
+	
 }
 
 void ASkaterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -72,32 +100,28 @@ void ASkaterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	PlayerInputComponent->BindAxis(FName("Turn"), this, &ASkaterCharacter::Turn);
 
 	PlayerInputComponent->BindAction(FName("Jump"), EInputEvent::IE_Pressed, this, &ASkaterCharacter::SkateJump);
-	PlayerInputComponent->BindAction(FName("Push"), EInputEvent::IE_Pressed, this, &ASkaterCharacter::StartPush);
-	PlayerInputComponent->BindAction(FName("Push"), EInputEvent::IE_Released, this, &ASkaterCharacter::StopPush);
+	PlayerInputComponent->BindAction(FName("Push"), EInputEvent::IE_Pressed, this, &ASkaterCharacter::PushButtonPressed);
+	PlayerInputComponent->BindAction(FName("Push"), EInputEvent::IE_Released, this, &ASkaterCharacter::PushButtonReleased);
 	PlayerInputComponent->BindAction(FName("Brake"), EInputEvent::IE_Pressed, this, &ASkaterCharacter::StartBrake);
 	PlayerInputComponent->BindAction(FName("Brake"), EInputEvent::IE_Released, this, &ASkaterCharacter::StopBrake);
 }
 
 void ASkaterCharacter::MoveForward(float Value)
 {
-	APlayerController* PC = Cast<APlayerController>(GetController());
 	if (PC && PC->IsInputKeyDown(EKeys::S))
 	{
 		Value = 0.f;
 	}
-	MoveForwardValue = UKismetMathLibrary::Lerp(MoveForwardValue, Value, 0.01f);
+	MoveForwardValue = UKismetMathLibrary::Lerp(MoveForwardValue, Value, 0.001f);
 	AddMovementInput(GetActorForwardVector(),MoveForwardValue);
 }
 
 void ASkaterCharacter::MoveRight(float Value)
 {
-
-	APlayerController* PC = Cast<APlayerController>(GetController());
 	if (Value != 0.f && PC && PC->IsInputKeyDown(EKeys::W))
 	{
 		AddMovementInput(GetActorRightVector(),Value * 0.02f);
 	}
-
 }
 
 void ASkaterCharacter::LookUp(float Value)
@@ -121,10 +145,22 @@ void ASkaterCharacter::SkateJump()
 	Jump();
 }
 
+void ASkaterCharacter::PushButtonPressed()
+{
+	bPushingButtonPressed = true;
+}
+
+void ASkaterCharacter::PushButtonReleased()
+{
+	bPushingButtonPressed = false;
+}
 
 void ASkaterCharacter::StartPush()
 {
-	bIsPushing = true;
+	if (PC && PC->IsInputKeyDown(EKeys::W))
+	{
+		bIsPushing = true;
+	}
 }
 
 void ASkaterCharacter::StopPush()
