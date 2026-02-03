@@ -99,7 +99,15 @@ private:
 	UPROPERTY(EditAnywhere, Category = "User Interface")
 	TSubclassOf<UUserWidget> HUDWidgetClass;
 
-	
+	//! Ground Alignment
+	UPROPERTY(EditAnywhere, Category="Ground Align")
+	float TraceLength = 50.f;
+
+	UPROPERTY(EditAnywhere, Category="Ground Align")
+	float AlignInterpSpeed = 20.f;
+
+	bool bIsGrounded = false;
+	FVector LastGroundNormal = FVector::UpVector;
 
 public:
 	FORCEINLINE bool GetIsPushing() const { return bIsPushing; } 

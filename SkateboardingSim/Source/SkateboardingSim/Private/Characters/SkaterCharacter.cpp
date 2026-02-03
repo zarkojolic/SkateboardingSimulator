@@ -99,7 +99,31 @@ void ASkaterCharacter::Tick(float DeltaTime)
 		StartPush();
 	}
 	
-	
+	//! Ground Alignment
+	if (!GetCharacterMovement()->IsFalling())
+	{
+		FHitResult FrontHit;
+		FHitResult BackHit;
+
+		bool bFront = TraceGroundFromSocket("FrontWheels", FrontHit);
+		bool bBack  = TraceGroundFromSocket("BackWheels", BackHit);
+
+		if (bFront && bBack)
+		{
+			bIsGrounded = true;
+
+			FVector GroundNormal = (FrontHit.Normal + BackHit.Normal).GetSafeNormal();
+
+			LastGroundNormal = GroundNormal;
+
+			AlignToGround(GroundNormal, DeltaTime);
+		}
+	}
+	else
+	{
+		bIsGrounded = false;
+		
+	}
 }
 
 void ASkaterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -248,3 +272,40 @@ void ASkaterCharacter::StopBrake()
 }
 
 
+bool ASkaterCharacter::TraceGroundFromSocket(FName SocketName,FHitResult& OutHit)
+{
+	const FVector Start = Skateboard->GetSocketLocation(SocketName);
+	const FVector End   = Start - FVector::UpVector * TraceLength;
+
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+
+	return GetWorld()->LineTraceSingleByChannel(
+		OutHit,
+		Start,
+		End,
+		ECC_Visibility,
+		Params
+	);
+}
+
+void ASkaterCharacter::AlignToGround(const FVector& GroundNormal, float DeltaTime)
+{
+	float CurrentYaw = GetMesh()->GetComponentRotation().Yaw;
+
+    FVector ProjectedForward = FVector::VectorPlaneProject(GetMesh()->GetForwardVector(), GroundNormal).GetSafeNormal();
+    FVector ProjectedRight = FVector::VectorPlaneProject(GetMesh()->GetRightVector(), GroundNormal).GetSafeNormal();
+
+    FRotator TargetRot = FRotationMatrix::MakeFromXZ(ProjectedForward, GroundNormal).Rotator();
+
+    TargetRot.Yaw = CurrentYaw;
+
+    FRotator NewRot = FMath::RInterpTo(
+        GetMesh()->GetComponentRotation(),
+        TargetRot,
+        DeltaTime,
+        AlignInterpSpeed
+    );
+
+    GetMesh()->SetWorldRotation(NewRot);
+}
